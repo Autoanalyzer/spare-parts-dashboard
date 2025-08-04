@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการอะไหล่</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 25%, #4b79a1 50%, #78909c 75%, #90a4ae 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%),
+                linear-gradient(135deg, rgba(30, 60, 114, 0.1) 0%, rgba(42, 82, 152, 0.1) 100%);
+            z-index: -1;
+            animation: backgroundShift 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundShift {
+            0%, 100% { 
+                background-image: 
+                    radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+            }
+            50% { 
+                background-image: 
+                    radial-gradient(circle at 80% 30%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                    radial-gradient(circle at 20% 70%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                    radial-gradient(circle at 60% 20%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+            }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            box-shadow: 
+                0 25px 50px rgba(0, 0, 0, 0.15),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shine 6s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .header h1 {
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
+
+        .controls {
+            padding: 30px;
+            background: rgba(248, 250, 252, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            padding: 20px;
+            border-radius: 15px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            backdrop-filter: blur(15px);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .connection-status.connected {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        .connection-status.disconnected {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+        }
+
+        .control-group {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: white;
+            padding: 20px 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: #374151;
+            margin-right: 15px;
+            font-size: 1.1em;
+        }
+
+        .area-filter {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .area-btn {
+            padding: 12px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 25px;
+            background: white;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .area-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+
+        .area-btn.active {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border-color: #3b82f6;
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+            transform: scale(1.05);
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(-15px);
+            transition: all 0.4s ease;
+        }
+
+        .status.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .status.success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .status.error {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .status.loading {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .data-container {
+            padding: 40px;
+            background: white;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            background: #f8fafc;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-align: center;
+            color: #6b7280;
+            position: relative;
+        }
+
+        .tab::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            transition: width 0.3s ease;
+        }
+
+        .tab:hover {
+            background: rgba(59, 130, 246, 0.05);
+            color: #3b82f6;
+        }
+
+        .tab:hover::after {
+            width: 100%;
+        }
+
+        .tab.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        .tab.active::after {
+            width: 100%;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        }
+
+        .stat-number {
+            font-size: 3em;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+
+        .stat-label {
+            font-size: 1.2em;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 20px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            max-height: 700px;
+            overflow-y: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: linear-gradient(135deg, #1f2937, #374151);
+            color: white;
+            padding: 20px 18px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            padding: 18px;
+            border-bottom: 1px solid #f3f4f6;
+            transition: all 0.3s ease;
+            color: #374151;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .area-tag {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: white;
+        }
+
+        .area-pp5 { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .area-pp6 { background: linear-gradient(135deg, #10b981, #059669); }
+        .area-pp10 { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .area-pp11 { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: #9ca3af;
+            font-size: 1.2em;
+            font-weight: 500;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2.2em;
+            }
+            
+            .control-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-group {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .area-filter {
+                justify-content: center;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 ระบบจัดการอะไหล่</h1>
+            <p>Spare Parts Management System - Modern Dashboard</p>
+        </div>
+
+        <div class="controls">
+            <div id="connectionStatus" class="connection-status disconnected">
+                <span>🔴</span> กำลังเชื่อมต่อ Google Sheets...
+            </div>
+
+            <div class="control-group">
+                <div class="filter-group">
+                    <label>📍 เลือกพื้นที่:</label>
+                    <div class="area-filter">
+                        <button class="area-btn active" onclick="filterByArea('all', event)">ทั้งหมด</button>
+                        <button class="area-btn" onclick="filterByArea('PP5', event)">PP5</button>
+                        <button class="area-btn" onclick="filterByArea('PP6', event)">PP6</button>
+                        <button class="area-btn" onclick="filterByArea('PP10', event)">PP10</button>
+                        <button class="area-btn" onclick="filterByArea('PP11', event)">PP11</button>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="refreshData()">🔄 รีเฟรช</button>
+            </div>
+            <div class="status" id="status"></div>
+        </div>
+
+        <div class="data-container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalParts">0</div>
+                    <div class="stat-label">จำนวนอะไหล่ทั้งหมด</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="availableParts">0</div>
+                    <div class="stat-label">อะไหล่ที่มีในสต็อก</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="maintenanceIssues">0</div>
+                    <div class="stat-label">ปัญหาที่รอแก้ไข</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="selectedArea">ทั้งหมด</div>
+                    <div class="stat-label">พื้นที่ที่เลือก</div>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('maintenance', event)">🔧 Maintenance</div>
+                <div class="tab" onclick="showTab('spareparts', event)">📦 Spare Parts</div>
+            </div>
+
+            <div class="tab-content active" id="maintenance">
+                <div class="table-container">
+                    <table id="maintenanceTable">
+                        <thead>
+                            <tr>
+                                <th>พื้นที่</th>
+                                <th>ปัญหาที่พบ</th>
+                                <th>สาเหตุ</th>
+                                <th>วันที่แจ้ง</th>
+                                <th>ผู้แจ้ง</th>
+                            </tr>
+                        </thead>
+                        <tbody id="maintenanceTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-content" id="spareparts">
+                <div class="table-container">
+                    <table id="sparepartsTable">
+                        <thead>
+                            <tr>
+                                <th>พื้นที่</th>
+                                <th>ชื่อชิ้น</th>
+                                <th>ที่อยู่โพสต์</th>
+                                <th>จำนวน (Storeroom)</th>
+                                <th>ปริมาณ</th>
+                                <th>สถานการณ์อื่น</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sparepartsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let maintenanceData = [];
+        let sparepartsData = [];
+        let currentFilter = 'all';
+
+        // Your Google Sheets ID
+        const SHEET_ID = '1ZmbDEF5PMguXQX1Xu0NFdKaqnspmAC7qK_X63CTEq4I';
+
+        // Mock data for testing in case of failure
+        const mockMaintenanceData = [
+            ['PP5', 'So2 โซลินอยด์ ชำรุดคำจำกัน', 'สวิทช์สำเท็จแบสเก', '2024-01-15', 'ครรนฐมนัณฐ์'],
+            ['PP6', 'เครื่องรีดสีขึ้นใหม่ รอตรวจสอบ', 'ขาดการบำรุงรักษา', '2024-01-16', 'วลอรษรอน'],
+        ];
+
+        const mockSparepartsData = [
+            ['PP5', '1 filter', 'A-101', '1', '1', '1'],
+            ['PP6', 'O-ring seal', 'B-205', '25', '15', 'พร้อมใช้งาน'],
+        ];
+
+        function showStatus(message, type = 'success') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type} show`;
+            setTimeout(() => {
+                status.classList.remove('show');
+            }, 5000);
+        }
+
+        function updateConnectionStatus(connected, message) {
+            const connectionStatus = document.getElementById('connectionStatus');
+            if (connected) {
+                connectionStatus.className = 'connection-status connected';
+                connectionStatus.innerHTML = '<span>🟢</span> ' + message;
+            } else {
+                connectionStatus.className = 'connection-status disconnected';
+                connectionStatus.innerHTML = '<span>🔴</span> ' + message;
+            }
+        }
+
+        // =================================================================
+        // == THIS IS THE CORRECTED FUNCTION ==
+        // =================================================================
+        async function fetchGoogleSheetData(sheetName) {
+            try {
+                // Add a cache-busting parameter (_=timestamp) to the URL to ensure fresh data
+                const cacheBuster = `&_=${new Date().getTime()}`;
+                const originalUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${sheetName}${cacheBuster}`;
+                
+                // We use a CORS proxy to bypass browser security restrictions.
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(originalUrl)}`;
+
+                const response = await fetch(proxyUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const csvText = await response.text();
+                if (csvText.includes('error') || csvText.trim() === '') {
+                    throw new Error(`Could not fetch data for sheet: ${sheetName}. It might be private or empty.`);
+                }
+                return parseCSV(csvText);
+            } catch (error) {
+                console.error(`Error fetching Google Sheets data for sheet "${sheetName}":`, error);
+                throw error;
+            }
+        }
+
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            const result = [];
+            
+            for (let line of lines) {
+                if (line.trim()) {
+                    const row = line.split(',').map(cell => 
+                        cell.replace(/^"|"$/g, '').trim()
+                    );
+                    if (row.length > 1 || (row.length === 1 && row[0] !== '')) { 
+                        result.push(row);
+                    }
+                }
+            }
+            return result;
+        }
+
+        async function loadDataFromGoogleSheets() {
+            try {
+                updateConnectionStatus(false, 'กำลังเชื่อมต่อ Google Sheets...');
+                showStatus('กำลังโหลดข้อมูลจาก Google Sheets...', 'loading');
+
+                const [maintenanceRaw, sparepartsRaw] = await Promise.all([
+                    fetchGoogleSheetData('Maintenance'),
+                    fetchGoogleSheetData('SpareParts')
+                ]);
+
+                maintenanceData = maintenanceRaw.length > 1 ? maintenanceRaw.slice(1).filter(row => row.some(cell => cell && cell.trim() !== '')) : [];
+                sparepartsData = sparepartsRaw.length > 1 ? sparepartsRaw.slice(1).filter(row => row.some(cell => cell && cell.trim() !== '')) : [];
+
+                updateConnectionStatus(true, 'เชื่อมต่อ Google Sheets สำเร็จ');
+                showStatus(`โหลดข้อมูลสำเร็จ! Maintenance: ${maintenanceData.length} รายการ, Spare Parts: ${sparepartsData.length} รายการ`, 'success');
+                
+                return true;
+            } catch (error) {
+                console.error('Failed to load Google Sheets data:', error);
+                updateConnectionStatus(false, 'ไม่สามารถเชื่อมต่อ Google Sheets ได้');
+                showStatus('เกิดข้อผิดพลาดในการโหลดข้อมูล ใช้ข้อมูลตัวอย่างแทน', 'error');
+                
+                maintenanceData = mockMaintenanceData;
+                sparepartsData = mockSparepartsData;
+                
+                return false;
+            }
+        }
+
+        function showTab(tabName, event) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.currentTarget.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        function filterByArea(area, event) {
+            currentFilter = area;
+            
+            document.querySelectorAll('.area-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            displayMaintenanceData();
+            displaySparepartsData();
+            updateStats();
+            
+            showStatus(`แสดงข้อมูลพื้นที่: ${area === 'all' ? 'ทั้งหมด' : area}`, 'success');
+        }
+
+        function getAreaClass(area) {
+            const areaClasses = {
+                'PP5': 'area-pp5',
+                'PP6': 'area-pp6', 
+                'PP10': 'area-pp10',
+                'PP11': 'area-pp11'
+            };
+            // Match case-insensitively for class lookup
+            return areaClasses[area.toUpperCase()] || 'area-pp5';
+        }
+
+        function displayMaintenanceData() {
+            const tbody = document.getElementById('maintenanceTableBody');
+            tbody.innerHTML = '';
+
+            // Make filtering case-insensitive
+            let filteredData = (currentFilter === 'all') 
+                ? maintenanceData 
+                : maintenanceData.filter(row => row && row[0] && row[0].toUpperCase() === currentFilter.toUpperCase());
+
+            if (!filteredData || filteredData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="no-data">ไม่พบข้อมูลในพื้นที่ที่เลือก</td></tr>';
+                return;
+            }
+
+            filteredData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="area-tag ${getAreaClass(row[0])}">${row[0] || '-'}</span></td>
+                    <td>${row[1] || '-'}</td>
+                    <td>${row[2] || '-'}</td>
+                    <td>${row[3] || '-'}</td>
+                    <td>${row[4] || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function displaySparepartsData() {
+            const tbody = document.getElementById('sparepartsTableBody');
+            tbody.innerHTML = '';
+
+            // Make filtering case-insensitive
+            let filteredData = (currentFilter === 'all')
+                ? sparepartsData
+                : sparepartsData.filter(row => row && row[0] && row[0].toUpperCase() === currentFilter.toUpperCase());
+
+            if (!filteredData || filteredData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="no-data">ไม่พบข้อมูลในพื้นที่ที่เลือก</td></tr>';
+                return;
+            }
+
+            filteredData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="area-tag ${getAreaClass(row[0])}">${row[0] || '-'}</span></td>
+                    <td>${row[1] || '-'}</td>
+                    <td>${row[2] || '-'}</td>
+                    <td>${row[3] || '-'}</td>
+                    <td>${row[4] || '-'}</td>
+                    <td>${row[5] || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateStats() {
+            // Make filtering case-insensitive
+            let filteredMaintenanceData = (currentFilter === 'all')
+                ? maintenanceData
+                : maintenanceData.filter(row => row && row[0] && row[0].toUpperCase() === currentFilter.toUpperCase());
+                
+            let filteredSparepartsData = (currentFilter === 'all')
+                ? sparepartsData
+                : sparepartsData.filter(row => row && row[0] && row[0].toUpperCase() === currentFilter.toUpperCase());
+
+            document.getElementById('totalParts').textContent = filteredSparepartsData.length;
+            
+            const availableParts = filteredSparepartsData.filter(row => {
+                const quantity = parseInt(row[4], 10) || 0;
+                return quantity > 0;
+            }).length;
+            document.getElementById('availableParts').textContent = availableParts;
+            
+            document.getElementById('maintenanceIssues').textContent = filteredMaintenanceData.length;
+            document.getElementById('selectedArea').textContent = currentFilter === 'all' ? 'ทั้งหมด' : currentFilter;
+        }
+
+        async function refreshData() {
+            await loadDataFromGoogleSheets();
+            displayMaintenanceData();
+            displaySparepartsData();
+            updateStats();
+        }
+
+        window.addEventListener('load', async function() {
+            await loadDataFromGoogleSheets();
+            
+            displayMaintenanceData();
+            displaySparepartsData();
+            updateStats();
+            
+            // Set auto-refresh to a shorter interval for testing if needed, e.g., every 1 minute (60000)
+            setInterval(refreshData, 300000); // 5 minutes
+        });
+    </script>
+</body>
+</html>
